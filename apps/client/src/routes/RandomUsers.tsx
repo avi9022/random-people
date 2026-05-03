@@ -2,10 +2,15 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ProfileList } from "@/components/ProfileList";
 import { useRandomUsers } from "@/hooks/useRandomUsers";
+import { useSavedProfiles } from "@/hooks/useSavedProfiles";
 
 export default function RandomUsers() {
   const { data, isLoading, isError, error, refetch, isFetching } =
     useRandomUsers();
+
+  // Prime the saved-profiles list cache so the Profile page can determine
+  // isSaved without an extra round trip when the user clicks a row.
+  useSavedProfiles();
 
   return (
     <div className="min-h-screen p-8 max-w-3xl mx-auto space-y-6">

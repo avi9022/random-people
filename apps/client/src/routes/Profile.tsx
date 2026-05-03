@@ -10,10 +10,12 @@ import type { Profile, ProfileName } from "@finq/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { randomUsersQueryKey } from "@/hooks/useRandomUsers";
-import { savedProfilesQueryKey } from "@/hooks/useSavedProfiles";
+import {
+  savedProfilesQueryKey,
+  useSavedProfiles,
+} from "@/hooks/useSavedProfiles";
 import {
   deleteProfile,
-  getProfile,
   saveProfile,
   updateProfile,
 } from "@/lib/api/profiles";
@@ -23,40 +25,26 @@ function birthYear(dobDate: string): string {
   return Number.isFinite(y) ? String(y) : "—";
 }
 
-const savedProfileQueryKey = (uuid: string) =>
-  ["saved-profile", uuid] as const;
-
 export default function Profile() {
   const { uuid = "" } = useParams<{ uuid: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Subscribe to the random-users cache (no fetch — populated by /random).
-  // Subscribing instead of plain getQueryData lets the Profile page re-render
-  // when we mutate the cache via setQueryData (the unsaved-profile Update flow).
   const { data: randomList } = useQuery<Profile[]>({
     queryKey: randomUsersQueryKey,
     enabled: false,
   });
-  const randomCached = randomList?.find((p) => p.uuid === uuid);
+  const fromRandomList = randomList?.find((p) => p.uuid === uuid);
 
-  // Skip the singleton fetch when this uuid is in the random-users cache —
-  // the user just clicked a row on /random, so we already have the display
-  // data and the profile is almost certainly not in our DB. The rare case
-  // (a random uuid that's also saved) degrades via the Save 409 path.
-  const savedQuery = useQuery({
-    queryKey: savedProfileQueryKey(uuid),
-    queryFn: () => getProfile(uuid),
-    enabled: uuid !== "" && randomCached === undefined,
-    initialData: () =>
-      queryClient
-        .getQueryData<Profile[]>(savedProfilesQueryKey)
-        ?.find((p) => p.uuid === uuid) ?? undefined,
-  });
+  // Saved-profiles list is the source of truth for "is this saved?".
+  // /random primes it, /saved owns it. If neither has run yet (direct URL
+  // load), this fetches; otherwise it reads cache.
+  const savedQuery = useSavedProfiles();
+  const fromSavedList = savedQuery.data?.find((p) => p.uuid === uuid);
 
-  const isSaved =
-    randomCached !== undefined ? false : savedQuery.data != null;
-  const profile: Profile | undefined = randomCached ?? savedQuery.data ?? undefined;
+  const isSaved = fromSavedList !== undefined;
+  const profile: Profile | undefined = fromSavedList ?? fromRandomList;
 
   const [name, setName] = useState<ProfileName | null>(null);
   const editedName = name ?? profile?.name ?? null;
@@ -81,8 +69,10 @@ export default function Profile() {
   const saveMutation = useMutation({
     mutationFn: saveProfile,
     onSuccess: (created) => {
-      queryClient.setQueryData(savedProfileQueryKey(created.uuid), created);
-      queryClient.invalidateQueries({ queryKey: savedProfilesQueryKey });
+      queryClient.setQueryData<Profile[] | undefined>(
+        savedProfilesQueryKey,
+        (list) => (list ? [created, ...list] : [created])
+      );
       navigate("/saved");
     },
   });
@@ -90,8 +80,10 @@ export default function Profile() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteProfile(uuid),
     onSuccess: () => {
-      queryClient.setQueryData(savedProfileQueryKey(uuid), null);
-      queryClient.invalidateQueries({ queryKey: savedProfilesQueryKey });
+      queryClient.setQueryData<Profile[] | undefined>(
+        savedProfilesQueryKey,
+        (list) => list?.filter((p) => p.uuid !== uuid)
+      );
       navigate("/saved");
     },
   });
@@ -99,7 +91,6 @@ export default function Profile() {
   const updateSavedMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: (updated) => {
-      queryClient.setQueryData(savedProfileQueryKey(updated.uuid), updated);
       queryClient.setQueryData<Profile[] | undefined>(
         savedProfilesQueryKey,
         (list) => list?.map((p) => (p.uuid === updated.uuid ? updated : p))
