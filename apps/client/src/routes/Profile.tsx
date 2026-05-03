@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useMutation,
@@ -31,10 +31,14 @@ export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const randomCached = useMemo(() => {
-    const list = queryClient.getQueryData<Profile[]>(randomUsersQueryKey);
-    return list?.find((p) => p.uuid === uuid);
-  }, [queryClient, uuid]);
+  // Subscribe to the random-users cache (no fetch — populated by /random).
+  // Subscribing instead of plain getQueryData lets the Profile page re-render
+  // when we mutate the cache via setQueryData (the unsaved-profile Update flow).
+  const { data: randomList } = useQuery<Profile[]>({
+    queryKey: randomUsersQueryKey,
+    enabled: false,
+  });
+  const randomCached = randomList?.find((p) => p.uuid === uuid);
 
   // Skip the singleton fetch when this uuid is in the random-users cache —
   // the user just clicked a row on /random, so we already have the display
