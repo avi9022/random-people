@@ -77,13 +77,13 @@ export function ChatWidget() {
                 <p className="text-center text-muted-foreground text-xs">
                   Ask anything about your saved profiles.
                 </p>
-                <div className="space-y-2">
+                <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
                   {SUGGESTIONS.map((q) => (
                     <Button
                       key={q}
                       variant="outline"
                       size="sm"
-                      className="w-full justify-start text-xs h-auto py-2 whitespace-normal text-left font-normal"
+                      className="text-xs font-normal whitespace-nowrap shrink-0"
                       onClick={() => void send(q)}
                       disabled={isStreaming}
                     >
