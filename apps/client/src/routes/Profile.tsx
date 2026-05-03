@@ -73,6 +73,12 @@ export default function Profile() {
         savedProfilesQueryKey,
         (list) => (list ? [created, ...list] : [created])
       );
+      // If the user saved with an edited name, the random-users cache
+      // still has the original — sync it so /random reflects what was saved.
+      queryClient.setQueryData<Profile[] | undefined>(
+        randomUsersQueryKey,
+        (list) => list?.map((p) => (p.uuid === created.uuid ? created : p))
+      );
       navigate("/saved");
     },
   });
@@ -207,7 +213,13 @@ export default function Profile() {
       <div className="flex flex-wrap gap-2 pt-2 border-t">
         {!isSaved && (
           <Button
-            onClick={() => saveMutation.mutate(profile)}
+            onClick={() =>
+              saveMutation.mutate(
+                isNameDirty && editedName
+                  ? { ...profile, name: editedName }
+                  : profile
+              )
+            }
             disabled={saveMutation.isPending}
           >
             {saveMutation.isPending ? "Saving…" : "Save"}
