@@ -40,11 +40,11 @@ export function fullName(p: Pick<Profile, "name">): string {
 
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string(),
+  content: z.string().max(8000),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 export const chatRequestSchema = z.object({
-  messages: z.array(chatMessageSchema).min(1),
+  messages: z.array(chatMessageSchema).min(1).max(50),
 });
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
