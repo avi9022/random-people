@@ -23,15 +23,27 @@ profilesRouter.post("/", (req, res) => {
     res.status(400).json({ error: "Invalid profile", issues: parsed.error.issues });
     return;
   }
-  const profile = parsed.data;
 
-  if (profilesRepo.get(profile.uuid)) {
-    res.status(409).json({ error: "Profile with this uuid already exists" });
-    return;
+  try {
+    res.status(201).json(profilesRepo.insert(parsed.data));
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      res.status(409).json({ error: "Profile with this uuid already exists" });
+      return;
+    }
+    throw err;
   }
-
-  res.status(201).json(profilesRepo.insert(profile));
 });
+
+function isUniqueConstraintError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof err.code === "string" &&
+    err.code.startsWith("SQLITE_CONSTRAINT")
+  );
+}
 
 profilesRouter.put("/:uuid", (req, res) => {
   const { uuid } = req.params;

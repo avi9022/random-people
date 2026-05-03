@@ -19,6 +19,7 @@ import {
   saveProfile,
   updateProfile,
 } from "@/lib/api/profiles";
+import { errorMessage } from "@/lib/errors";
 
 function birthYear(dobDate: string): string {
   const y = new Date(dobDate).getFullYear();
@@ -143,14 +144,12 @@ export default function Profile() {
     );
   }
 
-  const errorMessage =
-    saveMutation.error instanceof Error
-      ? saveMutation.error.message
-      : deleteMutation.error instanceof Error
-        ? deleteMutation.error.message
-        : updateSavedMutation.error instanceof Error
-          ? updateSavedMutation.error.message
-          : null;
+  const activeError =
+    saveMutation.error ??
+    deleteMutation.error ??
+    updateSavedMutation.error ??
+    null;
+  const activeErrorMessage = activeError ? errorMessage(activeError) : null;
 
   return (
     <div className="min-h-screen p-8 max-w-3xl mx-auto space-y-6">
@@ -220,7 +219,7 @@ export default function Profile() {
                   : profile
               )
             }
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || saveMutation.isSuccess}
           >
             {saveMutation.isPending ? "Saving…" : "Save"}
           </Button>
@@ -229,7 +228,7 @@ export default function Profile() {
           <Button
             variant="destructive"
             onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
+            disabled={deleteMutation.isPending || deleteMutation.isSuccess}
           >
             {deleteMutation.isPending ? "Deleting…" : "Delete"}
           </Button>
@@ -246,8 +245,8 @@ export default function Profile() {
         </Button>
       </div>
 
-      {errorMessage && (
-        <p className="text-destructive text-sm">Error: {errorMessage}</p>
+      {activeErrorMessage && (
+        <p className="text-destructive text-sm">Error: {activeErrorMessage}</p>
       )}
     </div>
   );
