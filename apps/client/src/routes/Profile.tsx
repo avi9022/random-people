@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { Profile, ProfileName } from "@finq/shared";
+import { fullName, type Profile, type ProfileName } from "@finq/shared";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -172,7 +172,7 @@ export default function Profile() {
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <img
           src={profile.picture.large}
-          alt=""
+          alt={fullName(profile)}
           className="h-40 w-40 rounded-lg object-cover shrink-0"
         />
 

@@ -7,7 +7,7 @@ export function ProfileCard({ profile }: { profile: Profile }) {
     <div className="rounded-lg border bg-card p-4 flex gap-4 items-start">
       <img
         src={profile.picture.thumbnail}
-        alt=""
+        alt={fullName(profile)}
         className="h-14 w-14 rounded-full shrink-0"
       />
       <div className="flex-1 min-w-0 space-y-1 text-sm">

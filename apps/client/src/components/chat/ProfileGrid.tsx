@@ -13,7 +13,7 @@ export function ProfileGrid({ profiles }: { profiles: Profile[] }) {
           >
             <img
               src={p.picture.thumbnail}
-              alt=""
+              alt={fullName(p)}
               className="h-14 w-14 rounded-full"
             />
             <div className="text-xs font-medium text-center line-clamp-1">

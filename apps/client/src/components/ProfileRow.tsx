@@ -15,7 +15,7 @@ export function ProfileRow({ profile }: Props) {
     >
       <img
         src={profile.picture.thumbnail}
-        alt=""
+        alt={fullName(profile)}
         className="h-12 w-12 rounded-full shrink-0"
       />
       <div className="grid flex-1 gap-1 text-sm sm:grid-cols-2">
