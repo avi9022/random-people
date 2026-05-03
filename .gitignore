@@ -25,6 +25,9 @@ build/
 npm-debug.log*
 pnpm-debug.log*
 
+# server data
+apps/server/data/
+
 # docs (per project policy: only source code is committed)
 docs/
 
