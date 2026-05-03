@@ -12,6 +12,15 @@ import { profilesRepo } from "../db.js";
 
 export const chatRouter = Router();
 
+// Memoized lazily so the env var has time to load via dotenv before first use.
+let _client: Anthropic | undefined;
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _client;
+}
+
 const SYSTEM_PROMPT = `You are a friendly assistant helping the user explore their saved profiles in a small full-stack app. Saved profiles are random users (from randomuser.me) that the user chose to save to a personal SQLite database.
 
 You have data tools to look up profiles, and rendering tools to show rich UI:
@@ -204,8 +213,7 @@ chatRouter.post("/", async (req, res) => {
       .json({ error: "Invalid chat request", issues: parsed.error.issues });
     return;
   }
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     res.status(500).json({
       error:
         "ANTHROPIC_API_KEY is not configured on the server. Add it to apps/server/.env.",
@@ -222,22 +230,27 @@ chatRouter.post("/", async (req, res) => {
     res.write(`data: ${JSON.stringify(e)}\n\n`);
   };
 
-  const client = new Anthropic({ apiKey });
+  // Stop the (paid) Anthropic call when the client navigates away.
+  const controller = new AbortController();
+  req.on("close", () => controller.abort());
 
   try {
-    const runner = client.beta.messages.toolRunner({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      tools: makeTools(emit),
-      messages: parsed.data.messages.map(
-        (m: ChatMessage): Anthropic.Beta.BetaMessageParam => ({
-          role: m.role,
-          content: m.content,
-        })
-      ),
-      stream: true,
-    });
+    const runner = getClient().beta.messages.toolRunner(
+      {
+        model: "claude-haiku-4-5",
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        tools: makeTools(emit),
+        messages: parsed.data.messages.map(
+          (m: ChatMessage): Anthropic.Beta.BetaMessageParam => ({
+            role: m.role,
+            content: m.content,
+          })
+        ),
+        stream: true,
+      },
+      { signal: controller.signal }
+    );
 
     for await (const messageStream of runner) {
       for await (const event of messageStream) {
@@ -252,9 +265,15 @@ chatRouter.post("/", async (req, res) => {
 
     emit({ type: "done" });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[chat] error:", message);
-    emit({ type: "error", message });
+    if (controller.signal.aborted) return;
+    console.error(
+      "[chat] error:",
+      err instanceof Error ? err.message : String(err)
+    );
+    emit({
+      type: "error",
+      message: "Something went wrong. Please try again.",
+    });
   } finally {
     res.end();
   }
