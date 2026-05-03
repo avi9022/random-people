@@ -11,10 +11,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "baseUrl": ".",
     "paths": {
-      "@finq/shared": ["packages/shared/src"],
-      "@finq/shared/*": ["packages/shared/src/*"]
+      "@finq/shared": ["./packages/shared/src"],
+      "@finq/shared/*": ["./packages/shared/src/*"]
     }
   }
 }
