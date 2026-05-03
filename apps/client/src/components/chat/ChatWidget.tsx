@@ -41,7 +41,7 @@ export function ChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[calc(100vw-3rem)] sm:w-96 max-w-md h-[600px] max-h-[calc(100vh-7rem)] flex flex-col rounded-lg border bg-background shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 w-[calc(100vw-3rem)] sm:w-[440px] max-w-lg h-[720px] max-h-[calc(100vh-7rem)] flex flex-col rounded-lg border bg-background shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-semibold text-sm">Ask AI about your profiles</div>
             <div className="flex items-center gap-1">
