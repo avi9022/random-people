@@ -1,0 +1,77 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10.30.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pack deploy artifact
+        run: |
+          tar czf /tmp/finq-deploy.tar.gz \
+            package.json pnpm-lock.yaml pnpm-workspace.yaml \
+            apps/server/package.json apps/server/dist \
+            apps/client/dist \
+            packages/shared/package.json packages/shared/dist
+
+      - name: Setup SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload artifact
+        run: |
+          scp -i ~/.ssh/deploy_key /tmp/finq-deploy.tar.gz \
+            "$EC2_USER@$EC2_HOST:/tmp/finq-deploy.tar.gz"
+
+      - name: Install dependencies and restart server
+        run: |
+          ssh -i ~/.ssh/deploy_key "$EC2_USER@$EC2_HOST" \
+            'set -euo pipefail; cd /opt/finq && tar xzf /tmp/finq-deploy.tar.gz && rm -f /tmp/finq-deploy.tar.gz && pnpm install --prod --frozen-lockfile && sudo systemctl restart finq-server'
+
+      - name: Healthcheck
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "http://$EC2_HOST/api/health" >/dev/null; then
+              echo "Healthcheck OK"
+              exit 0
+            fi
+            echo "Waiting for server to come up... ($i/10)"
+            sleep 3
+          done
+          echo "Healthcheck FAILED"
+          exit 1

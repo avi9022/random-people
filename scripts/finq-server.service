@@ -1,0 +1,19 @@
+[Unit]
+Description=Finq random-people Express server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/finq/apps/server
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=DB_PATH=/opt/finq/data/profiles.db
+ExecStart=/usr/bin/node /opt/finq/apps/server/dist/index.js
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
