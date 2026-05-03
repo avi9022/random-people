@@ -31,23 +31,28 @@ export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const randomCached = useMemo(() => {
+    const list = queryClient.getQueryData<Profile[]>(randomUsersQueryKey);
+    return list?.find((p) => p.uuid === uuid);
+  }, [queryClient, uuid]);
+
+  // Skip the singleton fetch when this uuid is in the random-users cache —
+  // the user just clicked a row on /random, so we already have the display
+  // data and the profile is almost certainly not in our DB. The rare case
+  // (a random uuid that's also saved) degrades via the Save 409 path.
   const savedQuery = useQuery({
     queryKey: savedProfileQueryKey(uuid),
     queryFn: () => getProfile(uuid),
-    enabled: uuid !== "",
+    enabled: uuid !== "" && randomCached === undefined,
     initialData: () =>
       queryClient
         .getQueryData<Profile[]>(savedProfilesQueryKey)
         ?.find((p) => p.uuid === uuid) ?? undefined,
   });
 
-  const randomCached = useMemo(() => {
-    const list = queryClient.getQueryData<Profile[]>(randomUsersQueryKey);
-    return list?.find((p) => p.uuid === uuid);
-  }, [queryClient, uuid]);
-
-  const isSaved = savedQuery.data != null;
-  const profile: Profile | undefined = savedQuery.data ?? randomCached;
+  const isSaved =
+    randomCached !== undefined ? false : savedQuery.data != null;
+  const profile: Profile | undefined = randomCached ?? savedQuery.data ?? undefined;
 
   const [name, setName] = useState<ProfileName | null>(null);
   const editedName = name ?? profile?.name ?? null;
