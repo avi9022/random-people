@@ -11,8 +11,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
     "@finq/shared": "workspace:*",
     "better-sqlite3": "^12.9.0",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "zod": "^4.4.2"
   },

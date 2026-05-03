@@ -15,8 +15,10 @@ finq-deploy.tar.gz
 
 # env
 .env
+apps/server/.env
 .env.*
 !.env.example
+!apps/server/.env.example
 
 # editor / OS
 .vscode/

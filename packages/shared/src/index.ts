@@ -37,3 +37,14 @@ export type Profile = z.infer<typeof profileSchema>;
 export function fullName(p: Pick<Profile, "name">): string {
   return `${p.name.title} ${p.name.first} ${p.name.last}`;
 }
+
+export const chatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+});
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export const chatRequestSchema = z.object({
+  messages: z.array(chatMessageSchema).min(1),
+});
+export type ChatRequest = z.infer<typeof chatRequestSchema>;
