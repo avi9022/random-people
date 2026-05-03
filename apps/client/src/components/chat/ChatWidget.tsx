@@ -11,6 +11,12 @@ import { ProfileCard } from "@/components/chat/ProfileCard";
 import { ProfileGrid } from "@/components/chat/ProfileGrid";
 import { StatsBreakdown } from "@/components/chat/StatsBreakdown";
 
+const SUGGESTIONS = [
+  "How many profiles do I have?",
+  "Show me all my saved profiles",
+  "Break down profiles by country",
+];
+
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const { messages, isStreaming, error, send, reset } = useChatStream();
@@ -67,12 +73,24 @@ export function ChatWidget() {
             className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0"
           >
             {messages.length === 0 && (
-              <div className="text-center text-muted-foreground text-xs py-8 px-2 space-y-2">
-                <p>Ask anything about your saved profiles.</p>
-                <p className="italic">
-                  Try: "How many do I have?", "Who's from the US?", "Break down
-                  by age."
+              <div className="py-4 px-1 space-y-3">
+                <p className="text-center text-muted-foreground text-xs">
+                  Ask anything about your saved profiles.
                 </p>
+                <div className="space-y-2">
+                  {SUGGESTIONS.map((q) => (
+                    <Button
+                      key={q}
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start text-xs h-auto py-2 whitespace-normal text-left font-normal"
+                      onClick={() => void send(q)}
+                      disabled={isStreaming}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
             {messages.map((m, i) => (
