@@ -7,6 +7,7 @@ export type DisplayPart =
   | ({ type: "ui" } & UiBlock);
 
 export interface DisplayMessage {
+  id: string;
   role: "user" | "assistant";
   parts: DisplayPart[];
 }
@@ -35,13 +36,14 @@ export function useChatStream() {
 
       setError(null);
       const userMsg: DisplayMessage = {
+        id: crypto.randomUUID(),
         role: "user",
         parts: [{ type: "text", text: trimmed }],
       };
       const nextMessages: DisplayMessage[] = [
         ...messages,
         userMsg,
-        { role: "assistant", parts: [] },
+        { id: crypto.randomUUID(), role: "assistant", parts: [] },
       ];
       setMessages(nextMessages);
       setIsStreaming(true);

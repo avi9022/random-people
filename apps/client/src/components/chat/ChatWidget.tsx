@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,15 @@ export function ChatWidget() {
       behavior: "smooth",
     });
   }, [messages, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,8 +103,8 @@ export function ChatWidget() {
                 </div>
               </div>
             )}
-            {messages.map((m, i) => (
-              <MessageBubble key={i} message={m} />
+            {messages.map((m) => (
+              <MessageBubble key={m.id} message={m} />
             ))}
             {error && (
               <p className="text-destructive text-xs">Error: {error}</p>
@@ -141,7 +150,11 @@ export function ChatWidget() {
   );
 }
 
-function MessageBubble({ message }: { message: DisplayMessage }) {
+const MessageBubble = memo(function MessageBubble({
+  message,
+}: {
+  message: DisplayMessage;
+}) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -167,13 +180,16 @@ function MessageBubble({ message }: { message: DisplayMessage }) {
         </div>
       )}
       {message.parts.map((part, i) => (
-        <PartRenderer key={i} part={part} />
+        <PartRenderer
+          key={part.type === "ui" ? part.id : `text-${i}`}
+          part={part}
+        />
       ))}
     </div>
   );
-}
+});
 
-function PartRenderer({ part }: { part: DisplayPart }) {
+function PartRendererInner({ part }: { part: DisplayPart }) {
   if (part.type === "text") {
     if (!part.text) return null;
     return (
@@ -194,3 +210,5 @@ function PartRenderer({ part }: { part: DisplayPart }) {
       return <StatsBreakdown {...part.props} />;
   }
 }
+
+const PartRenderer = memo(PartRendererInner);
