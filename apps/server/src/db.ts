@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdirSync } from "node:fs";
 import Database from "better-sqlite3";
-import type { Profile } from "@finq/shared";
+import { profileSchema, type Profile } from "@finq/shared";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.resolve(here, "../data");
@@ -29,7 +29,18 @@ interface Row {
   updated_at: number;
 }
 
-const rowToProfile = (row: Row): Profile => JSON.parse(row.data) as Profile;
+function rowToProfile(row: Row): Profile | null {
+  const parsed = profileSchema.safeParse(JSON.parse(row.data));
+  if (!parsed.success) {
+    console.warn(
+      "[db] skipping row with invalid schema:",
+      row.uuid,
+      parsed.error.issues
+    );
+    return null;
+  }
+  return parsed.data;
+}
 
 const stmts = {
   list: db.prepare<[], Row>("SELECT * FROM profiles ORDER BY created_at DESC"),
@@ -45,12 +56,16 @@ const stmts = {
 
 export const profilesRepo = {
   list(): Profile[] {
-    return stmts.list.all().map(rowToProfile);
+    return stmts.list
+      .all()
+      .map(rowToProfile)
+      .filter((p): p is Profile => p !== null);
   },
 
   get(uuid: string): Profile | undefined {
     const row = stmts.get.get(uuid);
-    return row ? rowToProfile(row) : undefined;
+    if (!row) return undefined;
+    return rowToProfile(row) ?? undefined;
   },
 
   insert(profile: Profile): Profile {
