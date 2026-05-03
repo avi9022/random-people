@@ -91,10 +91,12 @@ export default function Profile() {
   const updateSavedMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: (updated) => {
-      queryClient.setQueryData<Profile[] | undefined>(
-        savedProfilesQueryKey,
-        (list) => list?.map((p) => (p.uuid === updated.uuid ? updated : p))
-      );
+      const patch = (list: Profile[] | undefined) =>
+        list?.map((p) => (p.uuid === updated.uuid ? updated : p));
+      queryClient.setQueryData<Profile[] | undefined>(savedProfilesQueryKey, patch);
+      // Keep the random-users cache in sync — the same uuid may still be
+      // displayed there after a save+update round trip.
+      queryClient.setQueryData<Profile[] | undefined>(randomUsersQueryKey, patch);
       setName(null);
     },
   });
