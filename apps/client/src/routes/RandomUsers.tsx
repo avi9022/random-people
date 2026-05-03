@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ProfileList } from "@/components/ProfileList";
 import { useRandomUsers } from "@/hooks/useRandomUsers";
-import { fullName } from "@finq/shared";
 
 export default function RandomUsers() {
   const { data, isLoading, isError, error, refetch, isFetching } =
@@ -14,7 +14,7 @@ export default function RandomUsers() {
       </Button>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Screen 1 — Random Users</h1>
+        <h1 className="text-3xl font-bold">Random Users</h1>
         <Button
           variant="outline"
           size="sm"
@@ -33,28 +33,7 @@ export default function RandomUsers() {
         </p>
       )}
 
-      {data && (
-        <ul className="space-y-2">
-          {data.map((p) => (
-            <li
-              key={p.uuid}
-              className="flex items-center gap-3 rounded-md border p-3"
-            >
-              <img
-                src={p.picture.thumbnail}
-                alt=""
-                className="h-12 w-12 rounded-full"
-              />
-              <div className="text-sm">
-                <div className="font-medium">{fullName(p)}</div>
-                <div className="text-muted-foreground">
-                  {p.location.country} · {p.email}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      {data && <ProfileList profiles={data} source="random" />}
     </div>
   );
 }
