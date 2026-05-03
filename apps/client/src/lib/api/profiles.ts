@@ -12,16 +12,6 @@ export async function listProfiles(): Promise<Profile[]> {
   return data;
 }
 
-export async function getProfile(uuid: string): Promise<Profile | null> {
-  try {
-    const { data } = await client.get<Profile>(`/${uuid}`);
-    return data;
-  } catch (err) {
-    if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-    throw err;
-  }
-}
-
 export async function saveProfile(profile: Profile): Promise<Profile> {
   const { data } = await client.post<Profile>("/", profile);
   return data;

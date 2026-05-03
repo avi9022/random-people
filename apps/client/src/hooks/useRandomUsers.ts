@@ -8,5 +8,6 @@ export function useRandomUsers() {
     queryKey: randomUsersQueryKey,
     queryFn: () => fetchRandomUsers(10),
     staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
