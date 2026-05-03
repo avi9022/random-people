@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   useMutation,
   useQuery,
@@ -26,10 +26,25 @@ function birthYear(dobDate: string): string {
   return Number.isFinite(y) ? String(y) : "—";
 }
 
+function readFromState(state: unknown): string | null {
+  if (
+    state &&
+    typeof state === "object" &&
+    "from" in state &&
+    typeof state.from === "string" &&
+    state.from.startsWith("/")
+  ) {
+    return state.from;
+  }
+  return null;
+}
+
 export default function Profile() {
   const { uuid = "" } = useParams<{ uuid: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+  const from = readFromState(location.state) ?? "/";
 
   // Subscribe to the random-users cache (no fetch — populated by /random).
   const { data: randomList } = useQuery<Profile[]>({
@@ -62,10 +77,7 @@ export default function Profile() {
       editedName.first !== profile.name.first ||
       editedName.last !== profile.name.last);
 
-  const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/");
-  };
+  const goBack = () => navigate(from);
 
   const saveMutation = useMutation({
     mutationFn: saveProfile,
@@ -80,7 +92,7 @@ export default function Profile() {
         randomUsersQueryKey,
         (list) => list?.map((p) => (p.uuid === created.uuid ? created : p))
       );
-      navigate("/saved");
+      navigate("/saved", { replace: true });
     },
   });
 
@@ -91,7 +103,7 @@ export default function Profile() {
         savedProfilesQueryKey,
         (list) => list?.filter((p) => p.uuid !== uuid)
       );
-      navigate("/saved");
+      navigate("/saved", { replace: true });
     },
   });
 

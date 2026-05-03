@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { fullName, type Profile } from "@finq/shared";
 
 interface Props {
@@ -6,9 +6,11 @@ interface Props {
 }
 
 export function ProfileRow({ profile }: Props) {
+  const location = useLocation();
   return (
     <Link
       to={`/profile/${profile.uuid}`}
+      state={{ from: location.pathname }}
       className="flex items-center gap-4 rounded-md border p-3 hover:bg-accent transition-colors"
     >
       <img
