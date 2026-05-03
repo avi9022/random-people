@@ -31,9 +31,6 @@ export default function Home() {
           <Button asChild size="lg" variant="outline">
             <Link to="/saved">History</Link>
           </Button>
-          <Button asChild size="lg" variant="ghost">
-            <Link to="/chat">Ask AI</Link>
-          </Button>
         </div>
       </div>
     </div>
