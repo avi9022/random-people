@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useChatStream } from "@/hooks/useChatStream";
+import {
+  useChatStream,
+  type DisplayMessage,
+  type DisplayPart,
+} from "@/hooks/useChatStream";
+import { ProfileCard } from "@/components/chat/ProfileCard";
+import { ProfileGrid } from "@/components/chat/ProfileGrid";
+import { StatsBreakdown } from "@/components/chat/StatsBreakdown";
 
 export default function Chat() {
   const { messages, isStreaming, error, send, reset } = useChatStream();
@@ -44,7 +51,7 @@ export default function Chat() {
       <h1 className="text-3xl font-bold mb-2">Ask about your saved profiles</h1>
       <p className="text-muted-foreground text-sm mb-6">
         Try: "How many profiles do I have?", "Who's from the United States?",
-        "Tell me about the youngest one."
+        "Show me a breakdown by country."
       </p>
 
       <div
@@ -57,26 +64,7 @@ export default function Chat() {
           </p>
         )}
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={
-              m.role === "user"
-                ? "flex justify-end"
-                : "flex justify-start"
-            }
-          >
-            <div
-              className={
-                m.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-[80%]"
-                  : "bg-muted rounded-lg px-4 py-2 max-w-[80%]"
-              }
-            >
-              {m.content || (
-                <span className="text-muted-foreground italic">…</span>
-              )}
-            </div>
-          </div>
+          <MessageBubble key={i} message={m} />
         ))}
         {error && (
           <p className="text-destructive text-sm">Error: {error}</p>
@@ -97,4 +85,58 @@ export default function Chat() {
       </form>
     </div>
   );
+}
+
+function MessageBubble({ message }: { message: DisplayMessage }) {
+  const isUser = message.role === "user";
+
+  if (isUser) {
+    const text = message.parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("");
+    return (
+      <div className="flex justify-end">
+        <div className="bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap">
+          {text}
+        </div>
+      </div>
+    );
+  }
+
+  const hasContent = message.parts.length > 0;
+  return (
+    <div className="space-y-2">
+      {!hasContent && (
+        <div className="bg-muted rounded-lg px-4 py-2 max-w-[80%]">
+          <span className="text-muted-foreground italic">…</span>
+        </div>
+      )}
+      {message.parts.map((part, i) => (
+        <PartRenderer key={i} part={part} />
+      ))}
+    </div>
+  );
+}
+
+function PartRenderer({ part }: { part: DisplayPart }) {
+  if (part.type === "text") {
+    if (!part.text) return null;
+    return (
+      <div className="flex justify-start">
+        <div className="bg-muted rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap">
+          {part.text}
+        </div>
+      </div>
+    );
+  }
+
+  switch (part.component) {
+    case "ProfileCard":
+      return <ProfileCard {...part.props} />;
+    case "ProfileGrid":
+      return <ProfileGrid {...part.props} />;
+    case "StatsBreakdown":
+      return <StatsBreakdown {...part.props} />;
+  }
 }

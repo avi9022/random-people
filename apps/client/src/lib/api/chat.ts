@@ -1,7 +1,25 @@
-import type { ChatMessage } from "@finq/shared";
+import type { ChatMessage, Profile } from "@finq/shared";
+
+export type UiBlock =
+  | {
+      id: string;
+      component: "ProfileCard";
+      props: { profile: Profile };
+    }
+  | {
+      id: string;
+      component: "ProfileGrid";
+      props: { profiles: Profile[] };
+    }
+  | {
+      id: string;
+      component: "StatsBreakdown";
+      props: { title: string; items: { label: string; count: number }[] };
+    };
 
 export interface ChatStreamHandlers {
   onDelta: (text: string) => void;
+  onUi: (block: UiBlock) => void;
   onDone: () => void;
   onError: (message: string) => void;
 }
@@ -50,7 +68,14 @@ export async function streamChat(
         const payload = chunk.slice(5).trim();
         if (!payload) continue;
 
-        let event: { type: string; text?: string; message?: string };
+        let event: {
+          type: string;
+          text?: string;
+          message?: string;
+          id?: string;
+          component?: UiBlock["component"];
+          props?: UiBlock["props"];
+        };
         try {
           event = JSON.parse(payload);
         } catch {
@@ -59,6 +84,17 @@ export async function streamChat(
 
         if (event.type === "delta" && typeof event.text === "string") {
           handlers.onDelta(event.text);
+        } else if (
+          event.type === "ui" &&
+          event.id &&
+          event.component &&
+          event.props
+        ) {
+          handlers.onUi({
+            id: event.id,
+            component: event.component,
+            props: event.props,
+          } as UiBlock);
         } else if (event.type === "done") {
           handlers.onDone();
           return;

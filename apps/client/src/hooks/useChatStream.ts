@@ -1,9 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@finq/shared";
-import { streamChat } from "@/lib/api/chat";
+import { streamChat, type UiBlock } from "@/lib/api/chat";
+
+export type DisplayPart =
+  | { type: "text"; text: string }
+  | ({ type: "ui" } & UiBlock);
+
+export interface DisplayMessage {
+  role: "user" | "assistant";
+  parts: DisplayPart[];
+}
+
+function partsToText(parts: DisplayPart[]): string {
+  return parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
 
 export function useChatStream() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -18,22 +34,52 @@ export function useChatStream() {
       if (!trimmed || isStreaming) return;
 
       setError(null);
-      const userMsg: ChatMessage = { role: "user", content: trimmed };
-      const history: ChatMessage[] = [...messages, userMsg];
-      setMessages([...history, { role: "assistant", content: "" }]);
+      const userMsg: DisplayMessage = {
+        role: "user",
+        parts: [{ type: "text", text: trimmed }],
+      };
+      const nextMessages: DisplayMessage[] = [
+        ...messages,
+        userMsg,
+        { role: "assistant", parts: [] },
+      ];
+      setMessages(nextMessages);
       setIsStreaming(true);
+
+      const wireHistory: ChatMessage[] = [...messages, userMsg].map((m) => ({
+        role: m.role,
+        content: partsToText(m.parts),
+      }));
 
       const controller = new AbortController();
       abortRef.current = controller;
 
-      await streamChat(history, controller.signal, {
+      await streamChat(wireHistory, controller.signal, {
         onDelta: (delta) => {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (!last || last.role !== "assistant") return prev;
+            const lastPart = last.parts[last.parts.length - 1];
+            const updatedParts =
+              lastPart && lastPart.type === "text"
+                ? [
+                    ...last.parts.slice(0, -1),
+                    { type: "text" as const, text: lastPart.text + delta },
+                  ]
+                : [...last.parts, { type: "text" as const, text: delta }];
+            return [
+              ...prev.slice(0, -1),
+              { ...last, parts: updatedParts },
+            ];
+          });
+        },
+        onUi: (block) => {
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (!last || last.role !== "assistant") return prev;
             return [
               ...prev.slice(0, -1),
-              { role: "assistant", content: last.content + delta },
+              { ...last, parts: [...last.parts, { type: "ui", ...block }] },
             ];
           });
         },
@@ -45,7 +91,7 @@ export function useChatStream() {
           setIsStreaming(false);
           setMessages((prev) => {
             const last = prev[prev.length - 1];
-            if (last && last.role === "assistant" && last.content === "") {
+            if (last && last.role === "assistant" && last.parts.length === 0) {
               return prev.slice(0, -1);
             }
             return prev;
