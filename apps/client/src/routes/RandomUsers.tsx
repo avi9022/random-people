@@ -33,7 +33,7 @@ export default function RandomUsers() {
         </p>
       )}
 
-      {data && <ProfileList profiles={data} source="random" />}
+      {data && <ProfileList profiles={data} />}
     </div>
   );
 }

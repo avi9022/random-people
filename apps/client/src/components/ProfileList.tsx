@@ -5,11 +5,10 @@ import { ProfileRow } from "@/components/ProfileRow";
 
 interface Props {
   profiles: Profile[];
-  source: "random" | "saved";
   emptyMessage?: string;
 }
 
-export function ProfileList({ profiles, source, emptyMessage }: Props) {
+export function ProfileList({ profiles, emptyMessage }: Props) {
   const [nameFilter, setNameFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
 
@@ -52,7 +51,7 @@ export function ProfileList({ profiles, source, emptyMessage }: Props) {
         <ul className="space-y-2">
           {filtered.map((p) => (
             <li key={p.uuid}>
-              <ProfileRow profile={p} source={source} />
+              <ProfileRow profile={p} />
             </li>
           ))}
         </ul>

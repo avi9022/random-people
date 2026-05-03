@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   useMutation,
   useQuery,
@@ -18,29 +18,27 @@ import {
   updateProfile,
 } from "@/lib/api/profiles";
 
-type Source = "random" | "saved";
-
 function birthYear(dobDate: string): string {
   const y = new Date(dobDate).getFullYear();
   return Number.isFinite(y) ? String(y) : "—";
 }
 
+const savedProfileQueryKey = (uuid: string) =>
+  ["saved-profile", uuid] as const;
+
 export default function Profile() {
   const { uuid = "" } = useParams<{ uuid: string }>();
-  const [searchParams] = useSearchParams();
-  const source: Source = searchParams.get("source") === "saved" ? "saved" : "random";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const backTo = source === "saved" ? "/saved" : "/random";
 
   const savedQuery = useQuery({
-    queryKey: ["saved-profile", uuid] as const,
+    queryKey: savedProfileQueryKey(uuid),
     queryFn: () => getProfile(uuid),
-    enabled: source === "saved" && uuid !== "",
+    enabled: uuid !== "",
     initialData: () =>
       queryClient
         .getQueryData<Profile[]>(savedProfilesQueryKey)
-        ?.find((p) => p.uuid === uuid),
+        ?.find((p) => p.uuid === uuid) ?? undefined,
   });
 
   const randomCached = useMemo(() => {
@@ -48,8 +46,8 @@ export default function Profile() {
     return list?.find((p) => p.uuid === uuid);
   }, [queryClient, uuid]);
 
-  const profile: Profile | undefined =
-    source === "saved" ? savedQuery.data : randomCached;
+  const isSaved = savedQuery.data != null;
+  const profile: Profile | undefined = savedQuery.data ?? randomCached;
 
   const [name, setName] = useState<ProfileName | null>(null);
   const editedName = name ?? profile?.name ?? null;
@@ -66,9 +64,15 @@ export default function Profile() {
       editedName.first !== profile.name.first ||
       editedName.last !== profile.name.last);
 
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
+
   const saveMutation = useMutation({
     mutationFn: saveProfile,
-    onSuccess: () => {
+    onSuccess: (created) => {
+      queryClient.setQueryData(savedProfileQueryKey(created.uuid), created);
       queryClient.invalidateQueries({ queryKey: savedProfilesQueryKey });
       navigate("/saved");
     },
@@ -77,6 +81,7 @@ export default function Profile() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteProfile(uuid),
     onSuccess: () => {
+      queryClient.setQueryData(savedProfileQueryKey(uuid), null);
       queryClient.invalidateQueries({ queryKey: savedProfilesQueryKey });
       navigate("/saved");
     },
@@ -85,11 +90,10 @@ export default function Profile() {
   const updateSavedMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: (updated) => {
-      queryClient.setQueryData(["saved-profile", updated.uuid], updated);
+      queryClient.setQueryData(savedProfileQueryKey(updated.uuid), updated);
       queryClient.setQueryData<Profile[] | undefined>(
         savedProfilesQueryKey,
-        (list) =>
-          list?.map((p) => (p.uuid === updated.uuid ? updated : p))
+        (list) => list?.map((p) => (p.uuid === updated.uuid ? updated : p))
       );
       setName(null);
     },
@@ -99,7 +103,7 @@ export default function Profile() {
     if (!profile || !editedName || !isNameDirty) return;
     const next: Profile = { ...profile, name: editedName };
 
-    if (source === "saved") {
+    if (isSaved) {
       updateSavedMutation.mutate(next);
       return;
     }
@@ -110,7 +114,7 @@ export default function Profile() {
     setName(null);
   };
 
-  if (savedQuery.isLoading && source === "saved" && !profile) {
+  if (savedQuery.isLoading && !profile) {
     return (
       <div className="min-h-screen p-8 max-w-3xl mx-auto">
         <p className="text-muted-foreground">Loading…</p>
@@ -121,8 +125,8 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="min-h-screen p-8 max-w-3xl mx-auto space-y-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link to={backTo}>← Back</Link>
+        <Button variant="ghost" size="sm" onClick={goBack}>
+          ← Back
         </Button>
         <p className="text-destructive text-sm">
           Profile not found. It may have expired from the cache — go back and try again.
@@ -142,8 +146,8 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen p-8 max-w-3xl mx-auto space-y-6">
-      <Button asChild variant="ghost" size="sm">
-        <Link to={backTo}>← Back</Link>
+      <Button variant="ghost" size="sm" onClick={goBack}>
+        ← Back
       </Button>
 
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -199,7 +203,7 @@ export default function Profile() {
       </div>
 
       <div className="flex flex-wrap gap-2 pt-2 border-t">
-        {source === "random" && (
+        {!isSaved && (
           <Button
             onClick={() => saveMutation.mutate(profile)}
             disabled={saveMutation.isPending}
@@ -207,7 +211,7 @@ export default function Profile() {
             {saveMutation.isPending ? "Saving…" : "Save"}
           </Button>
         )}
-        {source === "saved" && (
+        {isSaved && (
           <Button
             variant="destructive"
             onClick={() => deleteMutation.mutate()}
@@ -219,14 +223,12 @@ export default function Profile() {
         <Button
           variant="secondary"
           onClick={handleUpdate}
-          disabled={
-            !isNameDirty || updateSavedMutation.isPending
-          }
+          disabled={!isNameDirty || updateSavedMutation.isPending}
         >
           {updateSavedMutation.isPending ? "Updating…" : "Update"}
         </Button>
-        <Button asChild variant="ghost">
-          <Link to={backTo}>Back</Link>
+        <Button variant="ghost" onClick={goBack}>
+          Back
         </Button>
       </div>
 
@@ -241,7 +243,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-muted-foreground text-xs mb-0.5">{label}</div>
-      <div className="capitalize-first">{value}</div>
+      <div>{value}</div>
     </div>
   );
 }

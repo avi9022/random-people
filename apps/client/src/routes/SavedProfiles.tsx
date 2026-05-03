@@ -25,7 +25,6 @@ export default function SavedProfiles() {
       {data && (
         <ProfileList
           profiles={data}
-          source="saved"
           emptyMessage="No saved profiles yet. Go to Fetch and save one from the detail screen."
         />
       )}

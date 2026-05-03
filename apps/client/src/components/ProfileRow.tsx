@@ -3,13 +3,12 @@ import { fullName, type Profile } from "@finq/shared";
 
 interface Props {
   profile: Profile;
-  source: "random" | "saved";
 }
 
-export function ProfileRow({ profile, source }: Props) {
+export function ProfileRow({ profile }: Props) {
   return (
     <Link
-      to={`/profile/${profile.uuid}?source=${source}`}
+      to={`/profile/${profile.uuid}`}
       className="flex items-center gap-4 rounded-md border p-3 hover:bg-accent transition-colors"
     >
       <img
