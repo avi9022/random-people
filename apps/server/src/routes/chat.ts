@@ -234,9 +234,14 @@ chatRouter.post("/", async (req, res) => {
     res.write(`data: ${JSON.stringify(e)}\n\n`);
   };
 
-  // Stop the (paid) Anthropic call when the client navigates away.
+  // Stop the (paid) Anthropic call if the client disconnects mid-response.
+  // Listen on `res.on("close")`, NOT `req.on("close")` — the latter fires the
+  // moment Express consumes the JSON body (in Node 18+), which is well before
+  // the client has actually navigated away.
   const controller = new AbortController();
-  req.on("close", () => controller.abort());
+  res.on("close", () => {
+    if (!res.writableEnded) controller.abort();
+  });
 
   try {
     const runner = getClient().beta.messages.toolRunner(
