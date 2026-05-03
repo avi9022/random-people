@@ -19,6 +19,13 @@ function partsToText(parts: DisplayPart[]): string {
     .join("");
 }
 
+// IDs are only used for React keys within a session. crypto.randomUUID is
+// unavailable on plain http origins (secure-context only), so we use a
+// timestamp + random combo that's collision-safe for our scale.
+function makeMessageId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export function useChatStream() {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -36,14 +43,14 @@ export function useChatStream() {
 
       setError(null);
       const userMsg: DisplayMessage = {
-        id: crypto.randomUUID(),
+        id: makeMessageId(),
         role: "user",
         parts: [{ type: "text", text: trimmed }],
       };
       const nextMessages: DisplayMessage[] = [
         ...messages,
         userMsg,
-        { id: crypto.randomUUID(), role: "assistant", parts: [] },
+        { id: makeMessageId(), role: "assistant", parts: [] },
       ];
       setMessages(nextMessages);
       setIsStreaming(true);
