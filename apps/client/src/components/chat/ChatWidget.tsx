@@ -10,6 +10,7 @@ import {
 import { ProfileCard } from "@/components/chat/ProfileCard";
 import { ProfileGrid } from "@/components/chat/ProfileGrid";
 import { StatsBreakdown } from "@/components/chat/StatsBreakdown";
+import { MarkdownText } from "@/components/chat/MarkdownText";
 
 const SUGGESTIONS = [
   "How many profiles do I have?",
@@ -177,8 +178,8 @@ function PartRenderer({ part }: { part: DisplayPart }) {
     if (!part.text) return null;
     return (
       <div className="flex justify-start">
-        <div className="bg-muted rounded-lg px-3 py-1.5 max-w-[85%] text-sm whitespace-pre-wrap">
-          {part.text}
+        <div className="bg-muted rounded-lg px-3 py-1.5 max-w-[85%] text-sm">
+          <MarkdownText>{part.text}</MarkdownText>
         </div>
       </div>
     );
