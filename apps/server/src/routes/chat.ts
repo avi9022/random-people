@@ -222,8 +222,12 @@ chatRouter.post("/", async (req, res) => {
   }
 
   res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  // Tells nginx (and other reverse proxies that respect this header) not to
+  // buffer the SSE response — without it, the client gets nothing until the
+  // upstream stream ends, defeating the point of streaming.
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
 
   const emit = (e: SseEvent) => {
